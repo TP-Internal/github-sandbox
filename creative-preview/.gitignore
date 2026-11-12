@@ -1,0 +1,35 @@
+# Credentials and local environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*credentials*.json
+*token*.json
+*secret*.json
+client_secret*.json
+.clasp.json
+.clasprc.json
+.clasprc.json.*
+
+# Google Apps Script local/private config
+.local/
+config/local*
+recovery/
+clasp-clones/
+
+# Client / ad exports / approval datasets
+exports/
+client-data/
+*.csv
+*.xlsx
+*.xls
+
+# Build and editor artifacts
+node_modules/
+dist/
+build/
+.DS_Store
+.idea/
+.vscode/
+*.log
