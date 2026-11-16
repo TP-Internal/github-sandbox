@@ -14,7 +14,7 @@ The tools only ever fill in the detail and preview columns. **They never touch t
 | Campaign tab | `<Platform> - <Campaign>` | `Meta - Spring Sale` |
 | Approval column header | `CLIENT APPROVAL` | — |
 
-Use the same headers in every client's sheet. The Meta script finds its columns **by header name**, so the order can change but the header spelling must match exactly.
+Use the same headers in every client's sheet. The scripts find their columns **by header name**, so the order can change but the header spelling must match exactly.
 
 ## Sheet layouts (row 1 headers)
 
@@ -28,11 +28,11 @@ Use the same headers in every client's sheet. The Meta script finds its columns 
 
 **TikTok**
 
-| A | B | C | D | E | F | G |
-|---|---|---|---|---|---|---|
-| TikTok Ad ID | Account | Campaign Name | Ad Set Name | Ad Name | Creative Preview | CLIENT APPROVAL |
+| A | B | C | D | E | F | G | H |
+|---|---|---|---|---|---|---|---|
+| TikTok Ad ID | Account | Campaign Name | Ad Set Name | Ad Name | Creative Preview | Status | CLIENT APPROVAL |
 
-Paste the raw export starting at **AA2**. The headers in AA2:AG2 are: `Ad Group | Ad Group ID | Ad Name | Ad ID | Creative Name | Preview link | Expiration time`. Formulas in row 2 then fill A, D, E and F (see [`scripts/tiktok/TIKTOK_FORMULAS.md`](scripts/tiktok/TIKTOK_FORMULAS.md)). You type Account and Campaign in yourself.
+The same layout as Meta. `Ad Group Name` is also accepted instead of `Ad Set Name`. See [TikTok](#tiktok) for how preview links get in.
 
 **Pinterest**
 
@@ -40,7 +40,7 @@ Paste the raw export starting at **AA2**. The headers in AA2:AG2 are: `Ad Group 
 |---|---|---|---|---|---|---|---|
 | Pinterest Ad ID | Account | Campaign Name | Ad Set Name | Ad Name | Creative Preview | Status | CLIENT APPROVAL |
 
-This matches the Meta layout, so one template covers both.
+This matches the Meta and TikTok layouts, so one template covers all three.
 
 ## Meta
 
@@ -103,10 +103,81 @@ If there's no Status column, errors are written into the Creative Preview cell i
 
 ## TikTok
 
-- No API or script. TikTok Ads Manager's **Bulk Ads Sharing** export already includes a preview link for each ad.
-- Use **Bulk Ads Sharing**, not the normal reporting export. The normal export sometimes leaves the Ad ID blank.
-- Long IDs can get rounded if the file is opened in Excel first. Import the file straight into Google Sheets **as plain text**.
-- Preview links expire. The `Expiration time` column tells you when, so re-export before that date.
+The TikTok script reads the ad IDs you paste in, looks up each ad's account, campaign, ad group and name through TikTok's API, and adds a preview link. Like Meta, it skips finished rows and sorts the tab.
+
+**Where the preview links come from:** the most reliable source is TikTok Ads Manager's **bulk preview export**. If you paste it into the sheet, the script takes each ad's link from there. For ads that have no link in the export, the script asks TikTok's preview API instead. That doesn't always return a link, so if rows say `Preview Unavailable`, paste the export.
+
+### Before you start (one-off, per person)
+
+TikTok's login is saved **per person**, not for the whole spreadsheet. Everyone who runs the TikTok script does these steps once. They're kept in that person's own private settings (Apps Script *User Properties*: `TT_APP_ID`, `TT_SECRET`, `TT_TOKEN`), so they don't appear in Script Properties.
+
+1. Make sure `TikTokPreviews.gs` and `Menu.gs` are in the spreadsheet's Apps Script project.
+2. Get the **App ID**, **Secret** and **authorisation link** from your company's TikTok for Business developer app (Marketing API). Ask whoever manages it.
+3. **Creative Previews → TikTok setup → 1. Save TikTok App ID & Secret** and paste the App ID and Secret.
+4. Open the authorisation link, log in to TikTok and approve the ad accounts. TikTok then sends you to another page: copy that page's **whole web address** (it contains an `auth_code`).
+5. **Creative Previews → TikTok setup → 2. Connect** and paste the address. Do this straight away: the code only works once and expires quickly. If it fails, authorise again for a fresh one.
+6. *(Recommended)* **Creative Previews → TikTok setup → 3. List TikTok accounts.** This makes a **TikTok Settings** tab listing every account you can access:
+   - **Column A** is the name shown in the `Account` column. You can change it, e.g. to a friendlier name.
+   - **Untick** the accounts that don't belong to this client. The script then only searches the ticked accounts, which is faster. If nothing is ticked, it searches all of them.
+   - Run it again whenever accounts change. Your names and ticks are kept.
+
+### What you do
+
+1. Duplicate the TikTok `TEMPLATE` tab and name it `TikTok - <Campaign>`. The script refuses to run on any other tab, or on a tab with "template" in its name.
+2. Check row 1 has these headers (any order; capitals don't matter):
+   - Required: `TikTok Ad ID`, `Account`, `Campaign Name`, `Ad Set Name` (or `Ad Group Name`), `Ad Name`, `Creative Preview`
+   - Optional: `Status` (recommended)
+3. Paste the ad IDs into the `TikTok Ad ID` column, one per row.
+4. **Get the preview links:** in TikTok Ads Manager, select the ads and export the bulk preview links. Import the file into Google Sheets **as plain text** and paste it into a tab called **TikTok Preview Links**. The export must keep its header row, which includes `Ad ID` and `Preview link`. One links tab can hold exports for every campaign.
+5. Click **Creative Previews → Generate TikTok Previews**.
+6. Read the pop-up summary, then check any rows whose Status starts with `ERROR` or says `Preview Unavailable`.
+
+To re-fetch **everything** (for example after creatives have been swapped), use **Creative Previews → Refresh All TikTok Previews**.
+
+**Links expire.** When you paste a fresh export, just run **Generate** again. Finished rows pick up the newer links straight from the export, without contacting TikTok.
+
+### What the script does, step by step
+
+1. **Checks the tab name and finds the columns** by their headers.
+2. **Cleans each ID:** it keeps only the digits. A valid ID is 6 to 25 digits.
+3. **Catches rounded IDs.** TikTok IDs are about 19 digits long, and Google Sheets rounds numbers that long, which breaks them. Those rows are marked as errors, and the ID column is set to **plain text** so the next paste keeps every digit.
+4. **Reads any pasted export**, from the **TikTok Preview Links** tab and from the campaign tab itself. It collects each ad's link and its expiry time. If both have a link for the same ad, the campaign tab's copy wins.
+5. **Skips rows that are already done** (Status `Success` with a link). If a newer export has a different link for a done row, the link is swapped in without contacting TikTok. **Refresh All** ignores this and processes every row.
+6. **Finds the ads.** For each account (only the ticked accounts if there's a TikTok Settings tab), it asks TikTok for just the IDs it needs, up to 100 per request. Any ID still not found is then checked against that account's **Smart+** ads.
+7. **Fills in each row:** Account, Campaign Name, Ad Set Name (TikTok's "ad group"), Ad Name, and a **View Ad** link. The link's expiry date is added as a **note** on the cell: hover over it to see it. Links from the API are given an estimated expiry 30 days ahead.
+8. **Leaves formula columns alone.** If a column is filled by a formula, the script doesn't write to it.
+9. **Writes everything back at once.**
+10. **Sorts the tab** by Campaign → Ad Set → Ad Name, moving whole rows. It **won't sort** a tab that has formula columns or an export pasted on it, because sorting would scramble them. This is why the TikTok Preview Links tab is the recommended place for the export.
+11. **Shows a summary** of how many succeeded, had no preview link, failed, were already done or were blank. If TikTok's preview API gave an error, the summary shows that too.
+
+The approval column is never written to.
+
+### What the Status column means
+
+| Status | Meaning | What to do |
+|---|---|---|
+| `Success` | Details and a preview link were added | Nothing. Skipped on later runs (but still picks up newer links from a fresh export) |
+| `Preview Unavailable` | The ad was found but no link came from the export or the API | Paste the bulk preview export (with its header row) and run **Generate** again |
+| `ERROR: ID was converted to a number and rounded…` | Sheets rounded the ID before the script saw it | Re-paste the original ID. The column is plain text now |
+| `ERROR: Not a valid TikTok Ad ID` | It isn't 6–25 digits | Check you pasted an **ad** ID |
+| `ERROR: Ad ID not found in authorised TikTok accounts` | None of the searched accounts has this ad | Check the ID. Make sure its account is ticked on **TikTok Settings** and was approved when you connected |
+
+If there's no Status column, errors are written into the Creative Preview cell instead.
+
+### Settings at the top of the script
+
+| Setting | Default | What it does |
+|---|---|---|
+| `TAB_PREFIX` | `TikTok -` | Tabs the script will run on |
+| `SETTINGS_SHEET` | `TikTok Settings` | Name of the account list tab |
+| `LINKS_SHEET` | `TikTok Preview Links` | Name of the tab for pasted exports |
+| `SUCCESS_STATUS` | `Success` | The Status text that marks a row as done |
+| `ID_FILTER_SIZE` | `100` | Ad IDs per lookup (100 is TikTok's maximum) |
+| `SORT_AFTER_GENERATE` | `true` | Sort the tab after each run (where it's safe) |
+
+### Without the API
+
+If someone can't connect to TikTok, the older formula-only method still works: see [`scripts/tiktok/TIKTOK_FORMULAS.md`](scripts/tiktok/TIKTOK_FORMULAS.md). It doesn't fill in the Account or Campaign columns, and it doesn't sort.
 
 ## Pinterest
 
@@ -122,7 +193,7 @@ A ready-made Pinterest script is **not included**. See [`scripts/pinterest/PINTE
 
 1. **Ad names are not unique.** The same name is often reused across regions, audiences or campaigns. Always match by **ID**, never with a name lookup such as `VLOOKUP` on the ad name.
 2. **Keep IDs as text.** Spreadsheets round long numbers.
-3. **Only ever move whole rows.** Sorting a single column after the client starts approving separates approvals from their ads. The Meta script sorts whole rows, so that's safe. Don't sort or replace raw exports by hand unless you re-match approvals by ad ID.
+3. **Only ever move whole rows.** Sorting a single column after the client starts approving separates approvals from their ads. The Meta and TikTok scripts sort whole rows, so that's safe. Don't sort or replace raw exports by hand unless you re-match approvals by ad ID.
 4. **Only one `onOpen` function per Apps Script project.** Two of them clash and produce duplicate or missing menus. The one `onOpen` lives in [`scripts/Menu.gs`](scripts/Menu.gs). It only shows menu items for platform scripts that are actually in the project.
 5. **Preview links expire.** If a refresh fails, show that the link is out of date rather than quietly keeping the old one.
 6. **Tokens expire.** Note each token's expiry date somewhere private, outside this repo, and renew it before then.

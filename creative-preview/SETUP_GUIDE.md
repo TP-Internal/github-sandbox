@@ -14,7 +14,7 @@ Do this once for your team. Then use [`NEW_CLIENT_CHECKLIST.md`](NEW_CLIENT_CHEC
 1. Create a new Google Sheet called something like `Creative Approvals - TEMPLATE`.
 2. Add one protected tab per platform: `TEMPLATE - Meta`, `TEMPLATE - TikTok`, `TEMPLATE - Pinterest`.
 3. Type the row 1 headers exactly as listed in [`HOW_IT_WORKS.md`](HOW_IT_WORKS.md#sheet-layouts-row-1-headers).
-4. On the TikTok tab, add the four formulas from [`scripts/tiktok/TIKTOK_FORMULAS.md`](scripts/tiktok/TIKTOK_FORMULAS.md) to row 2.
+4. Add an empty tab called `TikTok Preview Links`. TikTok exports get pasted here (see [`HOW_IT_WORKS.md`](HOW_IT_WORKS.md#tiktok)).
 5. Add a dropdown to the `CLIENT APPROVAL` column (Data → Data validation), e.g. `Approved / Changes needed / Rejected`.
 
 ## 2. Add the scripts to the template
@@ -35,7 +35,7 @@ In Apps Script go to **Project Settings → Script Properties** and add:
 | `META_ACCESS_TOKEN` | Meta script |
 | `PINTEREST_ACCESS_TOKEN` (plus whatever your Pinterest script needs) | Pinterest script |
 
-TikTok needs no token.
+TikTok is different: each person connects their own TikTok login from the menu (**Creative Previews → TikTok setup**). Those details are saved privately to that person, not in Script Properties. See [`HOW_IT_WORKS.md`](HOW_IT_WORKS.md#before-you-start-one-off-per-person).
 
 - **Never** paste a token into the code, a GitHub issue, a pull request or a chat.
 - Anyone who can edit the Apps Script project can read these properties, so keep the editor list short.
@@ -67,7 +67,7 @@ clasp push
 ## 5. Check it works
 
 - **Meta:** on a copy, run one ad you know is valid and one deliberately wrong ID. Check that the details are right, the link opens the right ad, Status is correct, and the approval column hasn't changed.
-- **TikTok:** paste a real export. Check that the IDs still have all their digits and the links open.
+- **TikTok:** on a copy, paste a few IDs, including one from a Smart+ campaign and one made-up ID. Paste the export on **TikTok Preview Links**, then run Generate. Check the details, the links, the expiry note on each link, and that the approval column hasn't changed.
 - **Pinterest:** test one ad ID from each ad account and check that each link opens the right ad.
 
 ## Troubleshooting
@@ -76,7 +76,9 @@ clasp push
 |---|---|
 | Meta: token or permission error | Renew the token. Check it can see that ad account. |
 | Meta: "Preview Unavailable" | The ad may be deleted or not viewable. Check it in Ads Manager. The next Generate run tries it again. |
-| TikTok: Ad ID blank | Use the **Bulk Ads Sharing** export, not the normal report export. |
+| TikTok: "TikTok not connected" | Run **Creative Previews → TikTok setup → 2. Connect** (each person does this once). |
+| TikTok: "Ad ID not found…" | Tick the ad's account on **TikTok Settings**. Check it was approved when you connected. |
+| TikTok: "Preview Unavailable" | Paste the Ads Manager preview export, with its header row, on **TikTok Preview Links** and run Generate again. |
 | TikTok: IDs ending in 000 | They were rounded. Re-import the file as plain text. |
 | Pinterest: wrong preview on an ad | You're matching by name. Match by ID. |
 | Duplicate or missing menu | There's more than one `onOpen`. Keep only the one in `Menu.gs`. |
