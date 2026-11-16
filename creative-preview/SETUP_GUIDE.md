@@ -20,8 +20,8 @@ Do this once for your team. Then use [`NEW_CLIENT_CHECKLIST.md`](NEW_CLIENT_CHEC
 ## 2. Add the scripts to the template
 
 1. In the template, open **Extensions → Apps Script**.
-2. Paste in [`scripts/meta/MetaPreviews.gs`](scripts/meta/MetaPreviews.gs) and save.
-3. If you add a Pinterest script, make sure the project still has **only one** `onOpen` function.
+2. Add a file called `Menu` and paste in [`scripts/Menu.gs`](scripts/Menu.gs). It builds the **Creative Previews** menu for every platform.
+3. Add a file called `MetaPreviews` and paste in [`scripts/meta/MetaPreviews.gs`](scripts/meta/MetaPreviews.gs). Add other platforms' scripts the same way. Only `Menu.gs` may contain an `onOpen` function.
 4. Reload the sheet. A **Creative Previews** menu should appear.
 
 Because the script is part of the template, every copy of the template gets it automatically.
@@ -75,9 +75,9 @@ clasp push
 | Problem | Fix |
 |---|---|
 | Meta: token or permission error | Renew the token. Check it can see that ad account. |
-| Meta: "Preview Unavailable" | The ad may be deleted or not viewable. Check it in Ads Manager, then use Refresh All. |
+| Meta: "Preview Unavailable" | The ad may be deleted or not viewable. Check it in Ads Manager. The next Generate run tries it again. |
 | TikTok: Ad ID blank | Use the **Bulk Ads Sharing** export, not the normal report export. |
 | TikTok: IDs ending in 000 | They were rounded. Re-import the file as plain text. |
 | Pinterest: wrong preview on an ad | You're matching by name. Match by ID. |
-| Duplicate or missing menu | There's more than one `onOpen`. Keep exactly one. |
+| Duplicate or missing menu | There's more than one `onOpen`. Keep only the one in `Menu.gs`. |
 | Old links stopped working | Previews expired. Re-run or re-export. |
