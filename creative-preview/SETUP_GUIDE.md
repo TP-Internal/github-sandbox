@@ -75,7 +75,7 @@ clasp push
 | Problem | Fix |
 |---|---|
 | Meta: token or permission error | Renew the token. Check it can see that ad account. |
-| Meta: "No preview available" | The ad may be deleted or not viewable. Check it in Ads Manager. |
+| Meta: "Preview Unavailable" | The ad may be deleted or not viewable. Check it in Ads Manager, then use Refresh All. |
 | TikTok: Ad ID blank | Use the **Bulk Ads Sharing** export, not the normal report export. |
 | TikTok: IDs ending in 000 | They were rounded. Re-import the file as plain text. |
 | Pinterest: wrong preview on an ad | You're matching by name. Match by ID. |
