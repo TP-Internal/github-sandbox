@@ -13,7 +13,8 @@
  * • Ad IDs can be pasted straight from an Ads Manager export,
  *   including the "PP" prefix (PP123… → 123…).
  * • Looks up only the ads on the tab, then only their ad groups and
- *   campaigns, in each configured account.
+ *   campaigns. It checks one ad to find which account owns the tab's ads,
+ *   then asks that account for the rest in one go.
  * • Previews come from Pinterest's ad-group preview endpoint and are
  *   matched back to each ad by ID, never by name.
  * • Skips rows already done (Status = Success + link). Use
@@ -274,6 +275,60 @@ function pinListByIds_(accountId, resource, param, ids, token, fullFallback) {
 }
 
 
+/**
+ * True if Pinterest refused because the IDs belong to a different
+ * ad account (HTTP 403, code 1902 "...does not match discovered advertiser").
+ */
+function pinIsWrongAccount_(error) {
+  return /"code"\s*:\s*1902|does not match discovered advertiser/i.test(error.message);
+}
+
+/**
+ * Finds which of the given ad IDs are in one account, BATCH_SIZE at a time.
+ *
+ * Pinterest refuses the whole request if ANY ID in it belongs to another
+ * account. When that happens the batch is split in half and each half is
+ * tried again, until the IDs that belong elsewhere are on their own and
+ * can be skipped. A tab whose ads are all in one account still needs
+ * just one request per 100 IDs.
+ */
+function pinAdsInAccount_(accountId, ids, token) {
+  const wanted = new Set(ids.map(String));
+  const found = [];
+  const queue = [];
+  for (let i = 0; i < ids.length; i += PIN.BATCH_SIZE) {
+    queue.push(ids.slice(i, i + PIN.BATCH_SIZE));
+  }
+
+  while (queue.length) {
+    const chunk = queue.shift();
+    try {
+      const page = pinList_(accountId, 'ads', token,
+        'ad_ids=' + encodeURIComponent(chunk.join(',')));
+      const inChunk = new Set(chunk.map(String));
+      // Got ads we didn't ask for? Then the filter was ignored and this is
+      // already the whole account, so there's no need to ask again.
+      if (page.some(x => !inChunk.has(String(x.id)))) {
+        return page.filter(x => wanted.has(String(x.id)));
+      }
+      found.push(...page);
+    } catch (error) {
+      const badRequest = /^HTTP (400|404)\b/.test(error.message);
+      if (!pinIsWrongAccount_(error) && !badRequest) throw error; // real problem
+      if (chunk.length > 1) {
+        const mid = Math.ceil(chunk.length / 2);
+        queue.push(chunk.slice(0, mid), chunk.slice(mid));
+      } else if (badRequest) {
+        console.warn('Ad ' + chunk[0] + ' skipped in account ' + accountId +
+          ': ' + error.message.slice(0, 200));
+      }
+      // A single ID that belongs to another account: not here, move on.
+    }
+  }
+  return found;
+}
+
+
 // ==========================================
 // FIND ADS ACROSS ACCOUNTS
 // ==========================================
@@ -299,16 +354,48 @@ function pinFindAds_(config, adIds) {
     }
   });
 
-  // 1. Quick lookup: only the IDs on the tab, in each account
+  // 1. Quick lookup. Ads on a tab usually all belong to one account, so:
+  //    find which account owns ONE ad (one small request per account),
+  //    then ask that account for all the remaining IDs at once.
+  //    Repeat until every ID is found or has been checked everywhere.
   for (const [name, accountId] of Object.entries(config.accounts)) {
-    const account = { name, accountId: String(accountId), ads: [] };
+    accounts.push({ name, accountId: String(accountId), ads: [] });
+  }
+  const checkedEverywhere = {};
+  const stillMissing = () => adIds.filter(id => !matches[id].length && !checkedEverywhere[id]);
+
+  while (stillMissing().length && !failures.length) {
+    const probe = stillMissing()[0];
+    let owner = null;
+
+    for (const account of accounts) {
+      try {
+        const ads = pinAdsInAccount_(account.accountId, [probe], config.token);
+        if (ads.length) {
+          account.ads.push(...ads);
+          addAds(account, ads);
+          owner = account;
+          break;
+        }
+      } catch (error) {
+        failures.push(account.name + ': ' + error.message);
+        break;
+      }
+    }
+
+    if (!owner) {
+      checkedEverywhere[probe] = true; // not in any account
+      continue;
+    }
+
+    const rest = stillMissing();
+    if (!rest.length) break;
     try {
-      account.ads = pinListByIds_(account.accountId, 'ads', 'ad_ids',
-        adIds, config.token, false);
-      addAds(account, account.ads);
-      accounts.push(account);
+      const ads = pinAdsInAccount_(owner.accountId, rest, config.token);
+      owner.ads.push(...ads);
+      addAds(owner, ads);
     } catch (error) {
-      failures.push(name + ': ' + error.message);
+      failures.push(owner.name + ': ' + error.message);
     }
   }
 
@@ -331,6 +418,9 @@ function pinFindAds_(config, adIds) {
 
   // 3. Only the ad groups and campaigns those ads belong to
   for (const account of accounts) {
+    account.groups = new Map();
+    account.campaigns = new Map();
+    if (!account.ads.length) continue;
     try {
       const groupIds = [...new Set(account.ads
         .map(ad => String(ad.ad_group_id || '')).filter(Boolean))];
