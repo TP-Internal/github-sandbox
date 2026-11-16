@@ -24,7 +24,7 @@ Use the same headers in every client's sheet. The Meta script finds its columns 
 |---|---|---|---|---|---|---|---|
 | Meta Ad ID | Account | Campaign Name | Ad Set Name | Ad Name | Creative Preview | Status | CLIENT APPROVAL |
 
-`Status` reports **whether the script managed to fetch that row**. It is not the ad's live or paused state in Meta. The possible values are: `Success`, `No preview available`, `Invalid Ad ID`, and `Error: <reason>`.
+`Status` is optional and shows **what happened when the script ran on that row**. It is not the ad's live or paused state in Meta. See [Meta → What the Status column means](#what-the-status-column-means).
 
 **TikTok**
 
@@ -44,11 +44,62 @@ This matches the Meta layout, so one template covers both.
 
 ## Meta
 
-- An Apps Script menu: **Creative Previews → Generate Meta Previews**.
-- For each ad ID it calls the Meta Marketing API for the ad's name, account, campaign, ad set and `preview_shareable_link`. It also looks up each account's name once and remembers it.
-- The access token lives in Script Property `META_ACCESS_TOKEN`. It needs `ads_read` and access to every ad account you want to preview.
-- One failing row doesn't stop the others. The error is written into that row's Status.
-- The API version is set at the top of the script. Check it is still supported before each new client setup.
+The Meta script reads the ad IDs you paste in, asks Meta for each ad's details and preview link, writes them into the row, then tidies the tab into order.
+
+### Before you start (one-off)
+
+- The script must be in the spreadsheet's Apps Script project, along with the separate menu file that creates the **Creative Previews** menu.
+- **Script Property needed:** `META_ACCESS_TOKEN`. This is a Meta access token that can read ads (`ads_read`) and has access to **every ad account** whose ads you'll paste in. If the token can't see an account, those rows show an error.
+- Tokens expire. When they do, every row fails with a token error and you need to put a new token in.
+
+### What you do
+
+1. Duplicate the Meta `TEMPLATE` tab and name it `Meta - <Campaign>`. The script refuses to run on any tab that doesn't start with `Meta -`, or that starts with `TEMPLATE`.
+2. Check row 1 has these headers. The order doesn't matter, but the spelling does (capitals don't):
+   - Required: `Meta Ad ID`, `Account`, `Campaign Name`, `Ad Set Name`, `Ad Name`, `Creative Preview`
+   - Optional: `Status` (recommended)
+3. Paste the ad IDs into the `Meta Ad ID` column, one per row. You can paste them straight from a Meta Ads Manager export. Prefixes such as `a:` are removed automatically.
+4. Click **Creative Previews → Generate Meta Previews**.
+5. Read the pop-up summary, then check any rows whose Status starts with `ERROR`.
+
+To re-fetch **everything**, for example after creatives have been swapped, use **Creative Previews → Refresh All Meta Previews** instead. It asks you to confirm first.
+
+### What the script does, step by step
+
+1. **Checks the tab name and finds the columns** by their headers. If a required header is missing, it stops and tells you which one.
+2. **Cleans each ad ID:** it removes prefixes like `a:`, `c:` or `cg:`, leading apostrophes and spaces. A valid ID is 6 to 25 digits.
+3. **Catches rounded IDs.** Meta IDs are about 18 digits long, and Google Sheets rounds any number that long, which breaks it. If an ID was pasted as a number, the row is marked as an error and you need to re-paste it. When the script finishes, it sets the ID column to **plain text** so the next paste keeps all the digits.
+4. **Skips rows that are already done.** A row is done if its Status is `Success` and it already has a link. Without a Status column, any row with a link counts as done. This makes re-runs quick: only new or failed rows are fetched. **Refresh All** ignores this and fetches every row.
+5. **Asks Meta in batches of 50.** Each request covers up to 50 ads, which is much faster than one at a time. If a batch fails (one bad ID can fail the whole batch), it retries those ads one by one, so only the bad ID shows an error.
+6. **Looks up account names.** Meta returns an account number, so the script makes one more batched request to turn it into the account's name.
+7. **Fills in each row:** Account, Campaign Name, Ad Set Name, Ad Name, and a **View Ad** link in Creative Preview. If Meta has no preview for that ad, the cell says `Preview Unavailable`.
+8. **Writes everything back at once.** This is faster and avoids a half-filled sheet.
+9. **Sorts the tab** by Campaign → Ad Set → Ad Name, so related ads sit together. Whole rows move together, so the client's approval stays next to the right ad. Only rows down to the last ad ID are sorted. To keep your paste order, set `SORT_AFTER_GENERATE` to `false` at the top of the script.
+10. **Shows a summary**: how many succeeded, failed, were already done, were blank, and roughly how many requests were made to Meta.
+
+The approval column is never written to. It only moves when whole rows are sorted.
+
+### What the Status column means
+
+| Status | Meaning | What to do |
+|---|---|---|
+| `Success` | Details and a working preview link were fetched | Nothing. The row is skipped on later runs |
+| `Preview Unavailable` | The ad was found but Meta gave no preview link | Check the ad in Ads Manager (it may be deleted or not previewable), then use Refresh All |
+| `ERROR: ID was converted to a number and rounded…` | Sheets rounded the ID before the script saw it | Re-paste the original ID. The column is plain text now, so it will paste correctly |
+| `ERROR: Not a valid Meta Ad ID` | After cleaning, it isn't 6–25 digits | Check you pasted an **ad** ID, not a name or a campaign ID |
+| `ERROR: <message from Meta>` | Meta refused the request, e.g. expired token, no access to that account, or the ad doesn't exist | Fix the cause, then run Generate again (failed rows are retried automatically) |
+
+If there's no Status column, errors are written into the Creative Preview cell instead.
+
+### Settings at the top of the script
+
+| Setting | Default | What it does |
+|---|---|---|
+| `API_VERSION` | `v26.0` | Which version of Meta's API to use. Meta retires old versions, so check it's still supported |
+| `TAB_PREFIX` | `Meta -` | Tabs the script will run on |
+| `BATCH_SIZE` | `50` | Ads per request (50 is Meta's maximum) |
+| `SUCCESS_STATUS` | `Success` | The Status text that marks a row as done |
+| `SORT_AFTER_GENERATE` | `true` | Sort the tab after each run |
 
 ## TikTok
 
@@ -71,7 +122,7 @@ A ready-made Pinterest script is **not included**. See [`scripts/pinterest/PINTE
 
 1. **Ad names are not unique.** The same name is often reused across regions, audiences or campaigns. Always match by **ID**, never with a name lookup such as `VLOOKUP` on the ad name.
 2. **Keep IDs as text.** Spreadsheets round long numbers.
-3. **Don't sort or replace raw exports after the client starts approving**, unless you re-match the approvals by ad ID.
+3. **Only ever move whole rows.** Sorting a single column after the client starts approving separates approvals from their ads. The Meta script sorts whole rows, so that's safe. Don't sort or replace raw exports by hand unless you re-match approvals by ad ID.
 4. **Only one `onOpen` function per Apps Script project.** Two of them clash and produce duplicate or missing menus. If you combine platforms, have one function build the whole menu.
 5. **Preview links expire.** If a refresh fails, show that the link is out of date rather than quietly keeping the old one.
 6. **Tokens expire.** Note each token's expiry date somewhere private, outside this repo, and renew it before then.
