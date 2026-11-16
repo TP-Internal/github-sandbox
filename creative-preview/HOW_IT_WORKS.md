@@ -181,19 +181,74 @@ If someone can't connect to TikTok, the older formula-only method still works: s
 
 ## Pinterest
 
-- Pinterest ad IDs in Ads Manager exports may start with a letter prefix (e.g. `PP`). Remove the prefix to get the number the API uses. Check this on one known ad first.
-- Pinterest makes previews **per ad group**, not per ad (`POST /v5/ad_accounts/{ad_account_id}/campaign_ad_preview`). The script has to match each preview back to the right ad **by ID**, never by name.
-- Your Pinterest developer app needs production access. Check which permissions the preview endpoint currently needs, because it has needed more than read-only access before.
-- Preview links expire after roughly 30 days, so refresh them on a schedule.
-- If a client has several ad accounts, the script needs to search all of them. Cache the ad lists so it doesn't download every ad on every run.
+The Pinterest script reads the ad IDs you paste in, finds each ad in your Pinterest ad accounts, and fills in its account, campaign, ad group, name and a preview link. Like Meta and TikTok, it skips finished rows and sorts the tab.
 
-A ready-made Pinterest script is **not included**. See [`scripts/pinterest/PINTEREST_GUIDE.md`](scripts/pinterest/PINTEREST_GUIDE.md) for what one must do.
+Pinterest uses **two script files**: `PinterestAuth.gs` connects the spreadsheet to Pinterest (done once), and `PinterestPreviews.gs` is the everyday generator.
+
+### Before you start (one-off, for the whole spreadsheet)
+
+Follow [`scripts/pinterest/PINTEREST_GUIDE.md`](scripts/pinterest/PINTEREST_GUIDE.md). In short, you publish the project as a Web App, add three Script Properties, log in from the menu, then list the ad accounts to search in **`PINTEREST_AD_ACCOUNTS`**. One login covers everyone who uses the spreadsheet, and it renews itself automatically.
+
+### What you do
+
+1. Duplicate the Pinterest `TEMPLATE` tab and name it `Pinterest - <Campaign>`. The script refuses to run on `TEMPLATE` tabs.
+2. Check row 1 has these headers (any order; capitals don't matter):
+   - Required: `Pinterest Ad ID`, `Account`, `Campaign Name`, `Ad Set Name`, `Ad Name`, `Creative Preview`
+   - Optional: `Status` (recommended)
+3. Paste the ad IDs into the `Pinterest Ad ID` column, one per row. IDs from an Ads Manager export start with `PP` (e.g. `PP687…`). That's fine: the script removes it.
+4. Click **Creative Previews → Generate Pinterest Previews**.
+5. Read the pop-up summary, then check any rows whose Status starts with `ERROR` or says `Preview Unavailable`.
+
+To re-fetch **everything**, for example after creatives have been swapped or links have expired, use **Creative Previews → Refresh All Pinterest Previews**.
+
+Unsure why an ID isn't working? **Pinterest setup → Check IDs on this tab** shows which account each of the first 10 IDs is in, without changing anything. **Check preview for first ID** shows exactly what Pinterest returns for that ad's preview.
+
+### What the script does, step by step
+
+1. **Checks the tab and finds the columns** by their headers.
+2. **Cleans each ID:** removes the `PP` prefix, apostrophes and spaces. A valid ID is 6 to 25 digits.
+3. **Skips rows that are already done** (Status `Success` with a link). If every row is done, it doesn't contact Pinterest at all. **Refresh All** ignores this.
+4. **Renews the login** if it expires within 2 days.
+5. **Finds the ads.** In each account listed in `PINTEREST_AD_ACCOUNTS`, it asks for only the IDs on your tab, up to 100 per request. For any ID it can't find that way, it then searches every ad in every account. That's thorough but slow, so fix or remove IDs that are reported as not found.
+6. **Stops safely.** If any account can't be read (e.g. lost access), **nothing on the sheet is changed** and the pop-up says which account failed.
+7. **Checks for duplicates.** If the same ID turns up in more than one account, the row is marked as an error rather than guessing.
+8. **Looks up only the ad groups and campaigns** those ads belong to, to fill in the names.
+9. **Gets the previews.** Pinterest makes previews **per ad group**, not per ad, so the script asks for each ad group's previews (up to 100 ad groups per request). It then matches each preview back to the right ad **by ID**, never by name. Only active, unexpired links are used.
+10. **Fills in each row:** Account (the name you gave it in `PINTEREST_AD_ACCOUNTS`), Campaign Name, Ad Set Name (Pinterest's "ad group"), Ad Name, and a **View Ad** link. The link's expiry date is added as a **note** on the cell: hover over it to see it.
+11. **If no new preview comes back,** any old link is **kept** but marked: Status becomes `Preview Unavailable` and the cell note says the old link may have expired. The row is tried again on the next run.
+12. **Writes everything back at once,** then **sorts the tab** by Campaign → Ad Set → Ad Name, moving whole rows. It won't sort a tab with formula columns.
+13. **Shows a summary,** including Pinterest's own explanation if a preview request failed.
+
+The approval column is never written to.
+
+### What the Status column means
+
+| Status | Meaning | What to do |
+|---|---|---|
+| `Success` | Details and a current preview link were added | Nothing. Skipped on later runs |
+| `Preview Unavailable` | The ad was found but Pinterest gave no active preview | Check the ad is active in Ads Manager. Use **Check preview for first ID** to see Pinterest's reply. Retried automatically next run |
+| `ERROR: Not a valid Pinterest Ad ID` | It isn't 6–25 digits, even after removing `PP` | Check you pasted an **ad** ID |
+| `ERROR: Ad ID not found in the Pinterest accounts set up` | None of the accounts in `PINTEREST_AD_ACCOUNTS` has it | Check the ID, and that its account is in `PINTEREST_AD_ACCOUNTS` |
+| `ERROR: Ad ID found in more than one account (…)` | The same ID is in two accounts, so the script won't guess | Run **Check IDs on this tab**, then remove the wrong account from `PINTEREST_AD_ACCOUNTS` |
+| `ERROR: ID was converted to a number and rounded…` | Sheets rounded the ID | Re-paste it. The column is plain text now |
+
+If there's no Status column, errors are written into the Creative Preview cell instead.
+
+### Settings at the top of the script
+
+| Setting | Default | What it does |
+|---|---|---|
+| `SUCCESS_STATUS` | `Success` | The Status text that marks a row as done |
+| `BATCH_SIZE` | `100` | IDs per lookup, and ad groups per preview request |
+| `FULL_SCAN_IF_NOT_FOUND` | `true` | Search every ad when the quick lookup can't find an ID. Set to `false` on very large accounts if not-found IDs make runs slow |
+| `REFRESH_DAYS_BEFORE_EXPIRY` | `2` | How early to renew the login |
+| `SORT_AFTER_GENERATE` | `true` | Sort the tab after each run |
 
 ## Lessons learned (apply to every client)
 
 1. **Ad names are not unique.** The same name is often reused across regions, audiences or campaigns. Always match by **ID**, never with a name lookup such as `VLOOKUP` on the ad name.
 2. **Keep IDs as text.** Spreadsheets round long numbers.
-3. **Only ever move whole rows.** Sorting a single column after the client starts approving separates approvals from their ads. The Meta and TikTok scripts sort whole rows, so that's safe. Don't sort or replace raw exports by hand unless you re-match approvals by ad ID.
+3. **Only ever move whole rows.** Sorting a single column after the client starts approving separates approvals from their ads. All three scripts sort whole rows, so that's safe. Don't sort or replace raw exports by hand unless you re-match approvals by ad ID.
 4. **Only one `onOpen` function per Apps Script project.** Two of them clash and produce duplicate or missing menus. The one `onOpen` lives in [`scripts/Menu.gs`](scripts/Menu.gs). It only shows menu items for platform scripts that are actually in the project.
 5. **Preview links expire.** If a refresh fails, show that the link is out of date rather than quietly keeping the old one.
-6. **Tokens expire.** Note each token's expiry date somewhere private, outside this repo, and renew it before then.
+6. **Tokens expire.** The Pinterest script renews its own login. For Meta, note the token's expiry date somewhere private, outside this repo, and renew it before then.

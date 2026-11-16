@@ -18,12 +18,13 @@ Repeat these steps for every client. Copy this list into your ticket or notes an
    - **Meta:** paste the ad IDs into column A, then **Creative Previews → Generate Meta Previews**.
    - **TikTok:** paste the ad IDs into column A. In Ads Manager, export the ads' preview links, import the file as plain text and paste it (with its header row) on the **TikTok Preview Links** tab. Then **Creative Previews → Generate TikTok Previews**.
      *First time for this client?* Run **TikTok setup → 3. List TikTok accounts** and tick only this client's accounts.
-   - **Pinterest:** paste the ad IDs into column A and run your Pinterest generator.
+   - **Pinterest:** paste the ad IDs (the `PP` prefix is fine) into column A, then **Creative Previews → Generate Pinterest Previews**.
+     *First time for this client?* Add their ad account(s) to `PINTEREST_AD_ACCOUNTS` (use **Pinterest setup → 3. Test connection** to find the IDs).
 3. [ ] Check the results:
    - [ ] Every row has a `View Ad` link, or a Status explaining why not.
    - [ ] Spot-check 3 links: each opens the ad named in that row.
    - [ ] IDs have all their digits (no rounding).
-4. [ ] Note when the preview links expire (TikTok: hover over a `View Ad` cell to see its expiry note; Pinterest: about 30 days).
+4. [ ] Note when the preview links expire (TikTok: hover over a `View Ad` cell to see its expiry note; Pinterest: hover over a `View Ad` cell to see its expiry note).
 5. [ ] Tell the client the tab is ready.
 
 ## C. Refreshing links
