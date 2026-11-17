@@ -1,4 +1,6 @@
-# TikTok — formula workflow (no script needed)
+# TikTok — formula-only method (fallback)
+
+> **The main TikTok method is now the script** (`TikTokPreviews.gs`). See the TikTok section of [`HOW_IT_WORKS.md`](../../HOW_IT_WORKS.md#tiktok). Use these formulas only if you can't connect to TikTok's API. The script leaves formula columns alone, so the two can share a tab, but a tab with formulas won't be sorted.
 
 Row 1 headers: `A TikTok Ad ID | B Account | C Campaign Name | D Ad Set Name | E Ad Name | F Creative Preview | G CLIENT APPROVAL`.
 

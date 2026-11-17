@@ -18,14 +18,14 @@ Keep the Meta, TikTok and Pinterest approval-sheet workflows working for **any c
 - In the Meta sheet, `Status` means "did the script succeed for this row". It is not the ad's delivery status.
 - Only one `onOpen` per Apps Script project.
 - Leave `TEMPLATE` tabs and the `<Platform> - <Campaign>` tab naming alone.
-- No secrets in code, logs, docs, tests or commits. Tokens live in Script Properties.
+- No secrets in code, logs, docs, tests or commits. Tokens live in Script Properties (Meta) or each person's User Properties (TikTok).
 - If a preview refresh fails, show it. Don't silently keep an old link.
 
 ## Be honest about status
 
 - `scripts/meta/MetaPreviews.gs` has **not been tested yet**. Don't describe it as tested until someone confirms it has been.
 - There is **no Pinterest script** in this repo. Any new one must be clearly labelled as new and tested before use.
-- TikTok works with formulas only. Don't describe it as an API integration.
+- `scripts/tiktok/TikTokPreviews.gs` uses TikTok's API to look up ads, but the most reliable preview links come from the pasted Ads Manager export. Its improved version has only been checked against a simulated sheet, not live TikTok.
 
 ## Testing
 

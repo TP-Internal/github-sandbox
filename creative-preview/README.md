@@ -16,7 +16,7 @@ Each ad gets one row with its account, campaign, ad set and ad name, a clickable
 | Platform | What you put in | What you get | Method |
 |---|---|---|---|
 | Meta | Ad IDs in column A | Account, campaign, ad set, ad name, `View Ad` link, Status | Apps Script + Meta Marketing API |
-| TikTok | Ads Manager **Bulk Ads Sharing** export | Ad ID, ad group, ad name, `View Ad` link | Spreadsheet formulas only |
+| TikTok | Ad IDs in column A, plus the Ads Manager bulk preview export | Account, campaign, ad group, ad name, `View Ad` link, Status | Apps Script + TikTok Marketing API |
 | Pinterest | Ad IDs from Ads Manager export | Account, campaign, ad group, ad name, `View Ad` link | Apps Script + Pinterest Ads API (bring your own script; see guide) |
 
 ## Folder layout
@@ -32,7 +32,8 @@ creative-preview/
 └── scripts/
     ├── Menu.gs                       # the Creative Previews menu (the only onOpen)
     ├── meta/MetaPreviews.gs          # Meta generator (batches, skips, sorts)
-    ├── tiktok/TIKTOK_FORMULAS.md     # TikTok formulas
+    ├── tiktok/TikTokPreviews.gs      # TikTok generator (looks up only needed IDs, skips, sorts)
+    ├── tiktok/TIKTOK_FORMULAS.md     # TikTok formula-only fallback
     └── pinterest/PINTEREST_GUIDE.md  # what a Pinterest generator must do
 ```
 

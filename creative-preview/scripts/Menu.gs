@@ -21,6 +21,15 @@ function onOpen() {
   if (typeof generateTikTokPreviews === 'function') {
     menu.addItem('Generate TikTok Previews', 'generateTikTokPreviews');
   }
+  if (typeof refreshAllTikTokPreviews === 'function') {
+    menu.addItem('Refresh All TikTok Previews', 'refreshAllTikTokPreviews');
+  }
+  if (typeof ttConnect === 'function') {
+    menu.addSubMenu(ui.createMenu('TikTok setup')
+      .addItem('1. Save TikTok App ID & Secret', 'ttSaveAppCredentials')
+      .addItem('2. Connect', 'ttConnect')
+      .addItem('3. List TikTok accounts', 'ttListAdvertisers'));
+  }
   if (typeof generatePinterestPreviews === 'function') {
     menu.addItem('Generate Pinterest Previews', 'generatePinterestPreviews');
   }
