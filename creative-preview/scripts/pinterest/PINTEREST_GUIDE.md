@@ -11,7 +11,7 @@
 5. **Get previews:** call `POST /v5/ad_accounts/{ad_account_id}/campaign_ad_preview`. It works per **ad group**, in batches of up to 100. Match each result back to the right ad **by ID, never by name**.
 6. **Write output:** Account, Campaign Name, Ad Set Name, Ad Name, a `View Ad` link in Creative Preview, and a Status (`Success`, `No preview available`, `Invalid Ad ID`, `Error: …`).
 7. **Never touch** the `CLIENT APPROVAL` column.
-8. **No `onOpen`** in this file if the Meta script already provides the menu. Add a menu item to the existing `onOpen` instead.
+8. **No `onOpen`** in this file. Name the main function `generatePinterestPreviews` and the shared menu in [`../Menu.gs`](../Menu.gs) will show it automatically.
 9. **Diagnostics:** a read-only function that checks a few IDs and reports which account matched, without writing anything to the sheet.
 
 ## Practical tips

@@ -30,7 +30,8 @@ creative-preview/
 ├── CLAUDE.md                 # rules for Claude Code
 ├── .gitignore                # keeps secrets and client data out of Git
 └── scripts/
-    ├── meta/MetaPreviews.gs          # Meta generator (test on a copy first)
+    ├── Menu.gs                       # the Creative Previews menu (the only onOpen)
+    ├── meta/MetaPreviews.gs          # Meta generator (batches, skips, sorts)
     ├── tiktok/TIKTOK_FORMULAS.md     # TikTok formulas
     └── pinterest/PINTEREST_GUIDE.md  # what a Pinterest generator must do
 ```

@@ -48,7 +48,7 @@ The Meta script reads the ad IDs you paste in, asks Meta for each ad's details a
 
 ### Before you start (one-off)
 
-- The script must be in the spreadsheet's Apps Script project, along with the separate menu file that creates the **Creative Previews** menu.
+- Two files must be in the spreadsheet's Apps Script project: [`scripts/meta/MetaPreviews.gs`](scripts/meta/MetaPreviews.gs) (the Meta script) and [`scripts/Menu.gs`](scripts/Menu.gs) (the **Creative Previews** menu, shared by all platforms).
 - **Script Property needed:** `META_ACCESS_TOKEN`. This is a Meta access token that can read ads (`ads_read`) and has access to **every ad account** whose ads you'll paste in. If the token can't see an account, those rows show an error.
 - Tokens expire. When they do, every row fails with a token error and you need to put a new token in.
 
@@ -75,7 +75,7 @@ To re-fetch **everything**, for example after creatives have been swapped, use *
 7. **Fills in each row:** Account, Campaign Name, Ad Set Name, Ad Name, and a **View Ad** link in Creative Preview. If Meta has no preview for that ad, the cell says `Preview Unavailable`.
 8. **Writes everything back at once.** This is faster and avoids a half-filled sheet.
 9. **Sorts the tab** by Campaign → Ad Set → Ad Name, so related ads sit together. Whole rows move together, so the client's approval stays next to the right ad. Only rows down to the last ad ID are sorted. To keep your paste order, set `SORT_AFTER_GENERATE` to `false` at the top of the script.
-10. **Shows a summary**: how many succeeded, failed, were already done, were blank, and roughly how many requests were made to Meta.
+10. **Shows a summary**: how many succeeded, had no preview, failed, were already done or were blank, and how many requests were made to Meta.
 
 The approval column is never written to. It only moves when whole rows are sorted.
 
@@ -84,7 +84,7 @@ The approval column is never written to. It only moves when whole rows are sorte
 | Status | Meaning | What to do |
 |---|---|---|
 | `Success` | Details and a working preview link were fetched | Nothing. The row is skipped on later runs |
-| `Preview Unavailable` | The ad was found but Meta gave no preview link | Check the ad in Ads Manager (it may be deleted or not previewable), then use Refresh All |
+| `Preview Unavailable` | The ad was found but Meta gave no preview link | Check the ad in Ads Manager (it may be deleted or not previewable). The next **Generate** run tries it again automatically |
 | `ERROR: ID was converted to a number and rounded…` | Sheets rounded the ID before the script saw it | Re-paste the original ID. The column is plain text now, so it will paste correctly |
 | `ERROR: Not a valid Meta Ad ID` | After cleaning, it isn't 6–25 digits | Check you pasted an **ad** ID, not a name or a campaign ID |
 | `ERROR: <message from Meta>` | Meta refused the request, e.g. expired token, no access to that account, or the ad doesn't exist | Fix the cause, then run Generate again (failed rows are retried automatically) |
@@ -123,6 +123,6 @@ A ready-made Pinterest script is **not included**. See [`scripts/pinterest/PINTE
 1. **Ad names are not unique.** The same name is often reused across regions, audiences or campaigns. Always match by **ID**, never with a name lookup such as `VLOOKUP` on the ad name.
 2. **Keep IDs as text.** Spreadsheets round long numbers.
 3. **Only ever move whole rows.** Sorting a single column after the client starts approving separates approvals from their ads. The Meta script sorts whole rows, so that's safe. Don't sort or replace raw exports by hand unless you re-match approvals by ad ID.
-4. **Only one `onOpen` function per Apps Script project.** Two of them clash and produce duplicate or missing menus. If you combine platforms, have one function build the whole menu.
+4. **Only one `onOpen` function per Apps Script project.** Two of them clash and produce duplicate or missing menus. The one `onOpen` lives in [`scripts/Menu.gs`](scripts/Menu.gs). It only shows menu items for platform scripts that are actually in the project.
 5. **Preview links expire.** If a refresh fails, show that the link is out of date rather than quietly keeping the old one.
 6. **Tokens expire.** Note each token's expiry date somewhere private, outside this repo, and renew it before then.
