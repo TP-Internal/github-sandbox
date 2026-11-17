@@ -6,7 +6,7 @@ Do this once for your team. Then use [`NEW_CLIENT_CHECKLIST.md`](NEW_CLIENT_CHEC
 
 - A Google Workspace account that can edit the approval spreadsheets.
 - Access to the clients' ad accounts on each platform.
-- For Meta and Pinterest: an approved developer app and an access token with read access to ads.
+- For Meta: an access token with read access to ads. For TikTok and Pinterest: access to your company's developer apps (each person connects TikTok; one person connects Pinterest).
 - Optional, for editing scripts on your computer: Node.js, Git and `clasp` (Google's command-line tool for Apps Script).
 
 ## 1. Build the master template spreadsheet
@@ -33,7 +33,7 @@ In Apps Script go to **Project Settings → Script Properties** and add:
 | Property | Used by |
 |---|---|
 | `META_ACCESS_TOKEN` | Meta script |
-| `PINTEREST_ACCESS_TOKEN` (plus whatever your Pinterest script needs) | Pinterest script |
+| `PINTEREST_APP_ID`, `PINTEREST_APP_SECRET`, `PINTEREST_REDIRECT_URI`, `PINTEREST_AD_ACCOUNTS` | Pinterest scripts. The login tokens are added for you. See [`scripts/pinterest/PINTEREST_GUIDE.md`](scripts/pinterest/PINTEREST_GUIDE.md) |
 
 TikTok is different: each person connects their own TikTok login from the menu (**Creative Previews → TikTok setup**). Those details are saved privately to that person, not in Script Properties. See [`HOW_IT_WORKS.md`](HOW_IT_WORKS.md#before-you-start-one-off-per-person).
 
@@ -68,7 +68,7 @@ clasp push
 
 - **Meta:** on a copy, run one ad you know is valid and one deliberately wrong ID. Check that the details are right, the link opens the right ad, Status is correct, and the approval column hasn't changed.
 - **TikTok:** on a copy, paste a few IDs, including one from a Smart+ campaign and one made-up ID. Paste the export on **TikTok Preview Links**, then run Generate. Check the details, the links, the expiry note on each link, and that the approval column hasn't changed.
-- **Pinterest:** test one ad ID from each ad account and check that each link opens the right ad.
+- **Pinterest:** on a copy, paste one ad ID from each account in `PINTEREST_AD_ACCOUNTS` (with the `PP` prefix) plus one made-up ID. Run **Check IDs on this tab**, then Generate. Check each link opens the right ad, the made-up ID shows "not found", and approvals haven't changed.
 
 ## Troubleshooting
 
@@ -80,6 +80,8 @@ clasp push
 | TikTok: "Ad ID not found…" | Tick the ad's account on **TikTok Settings**. Check it was approved when you connected. |
 | TikTok: "Preview Unavailable" | Paste the Ads Manager preview export, with its header row, on **TikTok Preview Links** and run Generate again. |
 | TikTok: IDs ending in 000 | They were rounded. Re-import the file as plain text. |
-| Pinterest: wrong preview on an ad | You're matching by name. Match by ID. |
+| Pinterest: "isn't connected" or "login has expired" | Log in again: see [`PINTEREST_GUIDE.md`](scripts/pinterest/PINTEREST_GUIDE.md#4-log-in). |
+| Pinterest: "Couldn't read every Pinterest account" | The login lost access to an account, or an ID in `PINTEREST_AD_ACCOUNTS` is wrong. Run **Pinterest setup → 3. Test connection**. |
+| Pinterest: "Ad ID not found" | Add the ad's account to `PINTEREST_AD_ACCOUNTS`. Run **Check IDs on this tab**. |
 | Duplicate or missing menu | There's more than one `onOpen`. Keep only the one in `Menu.gs`. |
 | Old links stopped working | Previews expired. Re-run or re-export. |

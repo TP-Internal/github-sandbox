@@ -33,5 +33,22 @@ function onOpen() {
   if (typeof generatePinterestPreviews === 'function') {
     menu.addItem('Generate Pinterest Previews', 'generatePinterestPreviews');
   }
+  if (typeof refreshAllPinterestPreviews === 'function') {
+    menu.addItem('Refresh All Pinterest Previews', 'refreshAllPinterestPreviews');
+  }
+  if (typeof pinterestOAuthStart === 'function') {
+    const pinSetup = ui.createMenu('Pinterest setup')
+      .addItem('1. Start login', 'pinterestOAuthStart')
+      .addItem('2. Finish login', 'pinterestOAuthExchange')
+      .addItem('3. Test connection', 'testPinterestAuthentication')
+      .addItem('Refresh login now', 'pinterestRefreshNow');
+    if (typeof diagnosePinterestIds === 'function') {
+      pinSetup
+        .addSeparator()
+        .addItem('Check IDs on this tab', 'diagnosePinterestIds')
+        .addItem('Check preview for first ID', 'diagnosePinterestPreviewAPI');
+    }
+    menu.addSubMenu(pinSetup);
+  }
   menu.addToUi();
 }
