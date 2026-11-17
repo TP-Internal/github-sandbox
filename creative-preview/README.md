@@ -6,7 +6,11 @@ Each ad gets one row with its account, campaign, ad set and ad name, a clickable
 
 ## Start here
 
-1. [`HOW_IT_WORKS.md`](HOW_IT_WORKS.md): what the sheets look like and how each platform works.
+**Just using the sheet?** Read [`HOW_TO_USE.md`](HOW_TO_USE.md). It's a plain-English, step-by-step guide.
+
+Setting it up or changing it:
+
+1. [`HOW_IT_WORKS.md`](HOW_IT_WORKS.md): what the sheets look like and how each platform's script works.
 2. [`SETUP_GUIDE.md`](SETUP_GUIDE.md): one-off setup (Apps Script, access keys, the master template).
 3. [`NEW_CLIENT_CHECKLIST.md`](NEW_CLIENT_CHECKLIST.md): the steps to repeat for every new client or campaign.
 4. [`CLAUDE.md`](CLAUDE.md): rules for Claude Code when changing this toolkit.
@@ -24,6 +28,7 @@ Each ad gets one row with its account, campaign, ad set and ad name, a clickable
 ```text
 creative-preview/
 ├── README.md                 # this file
+├── HOW_TO_USE.md             # plain-English guide for everyday users
 ├── HOW_IT_WORKS.md           # sheet layouts and platform details
 ├── SETUP_GUIDE.md            # one-off setup
 ├── NEW_CLIENT_CHECKLIST.md   # repeat for each client / campaign
